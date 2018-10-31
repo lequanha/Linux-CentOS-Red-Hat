@@ -1,0 +1,187 @@
+---------------------------- GOOD HAProxy 1.5 --------------------------
+ 
+1)  Download HAProxy Debian 
+$ cd /tmp
+$ wget http://ftp.us.debian.org/debian/pool/main/h/haproxy/haproxy_1.6.3-1_amd64.deb
+$ wget http://ftp.us.debian.org/debian/pool/main/l/lua5.3/liblua5.3-0_5.3.1-1_amd64.deb
+$ wget http://ftp.us.debian.org/debian/pool/main/p/pcre3/libpcre3_8.35-3.3+deb8u2_amd64.deb
+$ wget http://ftp.us.debian.org/debian/pool/main/o/openssl/libssl1.0.2_1.0.2f-2_amd64.deb
+$ wget http://launchpadlibrarian.net/173841617/init-system-helpers_1.18_all.deb
+
+$ apt-get update
+$ sudo dpkg -i liblua5.3-0_5.3.1-1_amd64.deb
+$ sudo dpkg -i libpcre3_8.35-3.3+deb8u2_amd64.deb
+$ sudo dpkg -i libssl1.0.2_1.0.2f-2_amd64.deb
+$ sudo dpkg -i init-system-helpers_1.18_all.deb
+$ sudo dpkg -i haproxy_1.6.3-1_amd64.deb
+$ apt-get update
+
+$ haproxy -v
+HA-Proxy version 1.6.3 2015/12/25
+Copyright 2000-2015 Willy Tarreau <willy@haproxy.org>
+
+5) Service start
+
+Please enable HAPROXY to run as service 
+root@...:/usr/local/src/haproxy-1.5.11$ vi /etc/default/haproxy 
+ENABLED=1
+
+root@...:/usr/local/src/haproxy-1.5.11$ chown -R haproxy:haproxy /var/lib/haproxy
+
+root@...:/usr/local/src/haproxy-1.5.11$ /etc/init.d/haproxy start
+* Starting haproxy haproxy                                              [ OK ]
+
+6) Re-configuration of HA-Proxy 
+root@...:/usr/local/src/haproxy-1.5.11$ vi /etc/haproxy/haproxy.cfg
+
+root@...:/usr/local/src/haproxy-1.5.11$ chmod 0755 /etc/haproxy/haproxy.cfg
+
+root@...:/usr/local/src/haproxy-1.5.11$ /etc/init.d/haproxy restart
+
+7) Checking if HA-Proxy is listening on Ports
+
+root@...:/usr/local/src/haproxy-1.5.11$ netstat -napt | grep 5432
+(No info could be read for "-p": geteuid()=1000 but you should be root.)
+tcp        0      0 0.0.0.0:5432              0.0.0.0:*               LISTEN      -
+tcp        0      0 10.236.134.187:5432       10.236.134.188:46436    ESTABLISHED -
+tcp        0      0 10.236.134.187:45693      10.236.134.189:5432     ESTABLISHED -
+tcp        0      0 10.236.134.187:5432       10.236.134.187:35804    ESTABLISHED -
+tcp        0      0 10.236.134.187:50118      10.236.134.188:5432     ESTABLISHED -
+tcp        0      0 10.236.134.187:5432       10.236.134.189:45325    ESTABLISHED -
+tcp        0      0 10.236.134.187:35804      10.236.134.187:5432     ESTABLISHED -
+tcp6       0      0 :::5432                   :::*                    LISTEN      -
+
+8) Syslog turning on
+root@...:/usr/local/src/haproxy-1.5.11$ mv /etc/logrotate.d/rsyslog.disabled  /etc/logrotate.d/rsyslog
+
+9) Rsyslog not fully installed yet, /usr/sbin/rsyslogd not found 
+root@...:~# apt-get install rsyslog
+*** rsyslog.conf (Y/I/N/O/D/Z) [default=N] ? Y
+
+root@...:/usr/local/src/haproxy-1.5.11$ service rsyslog restart
+rsyslog stop/waiting
+rsyslog start/running
+
+10) Syslog reset 
+root@...:/usr/local/src/haproxy-1.5.11$ vi /etc/rsyslog.conf
+
+-----------------------------------------------------------------------------------------
+
+$ModLoad imuxsock # provides support for local system logging
+$ModLoad imklog   # provides kernel logging support
+
+$ModLoad imudp
+$UDPServerRun 514
+
+$KLogPermitNonKernelFacility on
+
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+
+$RepeatedMsgReduction on
+
+$FileOwner syslog
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+$PrivDropToUser syslog
+$PrivDropToGroup syslog
+
+$WorkDirectory /var/spool/rsyslog
+
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+-----------------------------------------------------------------------------------------
+
+11) Log fixing 
+
+root@...:/usr/local/src/haproxy-1.5.11$ vi /etc/rsyslog.d/haproxy.conf
+
+-----------------------------------------------------------------------------------------
+# Custom log facilities for haproxy
+local0.*		        /var/log/haproxy_0.log 
+local1.*			/var/log/haproxy_1.log
+
+$ModLoad imudp
+$UDPServerRun 514
+-----------------------------------------------------------------------------------------
+
+root@...:/usr/local/src/haproxy-1.5.11$ service rsyslog restart
+
+12) Set Firewall to receive from Port 514
+
+Check and see that we have not opened Port 514  
+root@...:~$ iptables -L
+[sudo] password for local:
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Add Port 514
+root@...:~$ iptables -A INPUT -m state --state NEW -m udp -p udp --dport 514 -j ACCEPT
+
+Check Firewall
+root@...:~$ iptables -L
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+ACCEPT     udp  --  anywhere             anywhere             state NEW udp dpt:syslog
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+
+
+13) Rotate Logs
+root@...:/usr/local/src/haproxy-1.5.11$ vi /etc/logrotate.d/haproxy
+
+-----------------------------------------------------------------------------------------
+/var/log/haproxy.log {
+    weekly
+    rotate 4
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        invoke-rc.d rsyslog rotate >/dev/null 2>&1 || true
+    endscript
+}
+-----------------------------------------------------------------------------------------
+
+14) Reloading haproxy and rsyslog 
+root@...:/usr/local/src/haproxy-1.5.11$ service rsyslog restart
+root@...:/usr/local/src/haproxy-1.5.11$ /etc/init.d/haproxy restart
+
+15) Check if any log contents are created
+root@...:/usr/local/src/haproxy-1.5.11$  tail /var/log/haproxy*
+==> /var/log/haproxy_0.log <==
+Mar 21 02:04:43 localhost haproxy[1582]: Proxy pgdbplatform_frontend_cluster01 started.
+Mar 21 02:04:43 localhost haproxy[1582]: Proxy pgdbplatform_backend_cluster01 started.
+Mar 21 02:04:43 localhost haproxy[1582]: 10.236.134.188:46436 [21/Mar/2015:02:04:43.165] pgdbplatform_frontend_cluster01 pgdbplatform_backend_cluster01/Primary 1/0/+0 +0 -- 2/2/2/1/0 0/0
+Mar 21 02:04:43 localhost haproxy[1582]: 10.236.134.187:35804 [21/Mar/2015:02:04:43.166] pgdbplatform_frontend_cluster01 pgdbplatform_backend_cluster01/HotStandby 1/0/+0 +0 -- 2/2/2/1/0 0/0
+Mar 21 02:04:43 localhost haproxy[1582]: 10.236.134.189:45325 [21/Mar/2015:02:04:43.175] pgdbplatform_frontend_cluster01 pgdbplatform_backend_cluster01/AsyncStandby 1/0/+0 +0 -- 3/3/3/1/0 0/0
+
+==> /var/log/haproxy_1.log <==
+Mar 21 02:04:43 localhost haproxy[1582]: Proxy pgdbplatform_frontend_cluster01 started.
+Mar 21 02:04:43 localhost haproxy[1582]: Proxy pgdbplatform_backend_cluster01 started.
+
+
+16) Save iptables for reboot VM 
+root@...$ sh -c "/sbin/iptables-save > /etc/firewall.conf"
+
+Create reload on reboot 
+
+root@...$ vi /etc/network/if-up.d/iptables
+#! /bin/sh
+/sbin/iptables-restore < /etc/firewall.conf
+
+root@...$ chmod +x /etc/network/if-up.d/iptables
+
+

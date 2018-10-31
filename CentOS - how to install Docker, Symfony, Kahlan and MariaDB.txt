@@ -1,0 +1,172 @@
+I deployed this work on Amazon Webservices.
+The AMI that I used to deploy my CentOS 7 ec2 instance is
+
+CentOS-7-x86_64-EBS-HVM-20180318_121109-877e76fd-a132-410c-9982-c70ca8e41d88-ami-f5cb0388.4 (ami-7d579d00)
+
+From the above AMI, I installed Docker, MariaDB and Symfony4
+
+You can use the MS Word and PDF files inside this package to see all the screenshots
+
+A) Install docker
+[root@ip-172-31-95-82 centos]# cd /etc/yum.repos.d/
+[root@ip-172-31-95-82 yum.repos.d]# ls -lai
+total 52
+    102 drwxr-xr-x.  2 root root  229 Oct  7 01:33 .
+4194368 drwxr-xr-x. 74 root root 8192 Oct 13 22:54 ..
+  34412 -rw-r--r--.  1 root root 1664 Aug 13 14:34 CentOS-Base.repo
+    104 -rw-r--r--.  1 root root 1309 Aug 13 14:34 CentOS-CR.repo
+    105 -rw-r--r--.  1 root root  649 Aug 13 14:34 CentOS-Debuginfo.repo
+    109 -rw-r--r--.  1 root root  314 Aug 13 14:34 CentOS-fasttrack.repo
+    106 -rw-r--r--.  1 root root  630 Aug 13 14:34 CentOS-Media.repo
+    107 -rw-r--r--.  1 root root 1331 Aug 13 14:34 CentOS-Sources.repo
+    108 -rw-r--r--.  1 root root 4768 Aug 13 14:34 CentOS-Vault.repo
+ 243374 -rw-r--r--.  1 root root  951 Oct  2  2017 epel.repo
+ 146211 -rw-r--r--.  1 root root 1050 Oct  2  2017 epel-testing.repo
+
+[root@ip-172-31-95-82 yum.repos.d]# vi epel.repo
+enabled=1 
+
+[root@ip-172-31-95-82 yum.repos.d]# yum clean all
+sudo yum install -y yum-utils   device-mapper-persistent-data   lvm2
+sudo yum-config-manager     --add-repo     https://download.docker.com/linux/centos/docker-ce.repo
+
+sudo yum-config-manager --enable docker-ce-edge
+sudo yum-config-manager --enable docker-ce-test
+sudo yum install docker-ce
+sudo yum update
+
+[root@ip-172-31-95-82 yum.repos.d]# yum list docker-ce --showduplicates | sort -r | grep stable
+docker-ce.x86_64         18.06.1.ce-3.el7                       docker-ce-stable
+docker-ce.x86_64         18.06.0.ce-3.el7                       docker-ce-stable
+docker-ce.x86_64         18.03.1.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         18.03.0.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.12.1.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.12.0.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.09.1.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.09.0.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.06.2.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.06.1.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.06.0.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.03.3.ce-1.el7                       docker-ce-stable
+docker-ce.x86_64         17.03.2.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.03.1.ce-1.el7.centos                docker-ce-stable
+docker-ce.x86_64         17.03.0.ce-1.el7.centos                docker-ce-stable
+
+sudo yum install docker-ce-18.03.1.ce
+
+Install docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+
+B) Install Symfony4
+B1) Install PHP7
+yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum install http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+
+yum install yum-utils
+yum-config-manager --enable remi-php72
+
+yum install php php-mcrypt php-cli php-gd php-curl php-mysql php-ldap php-zip php-fileinfo 
+php -v
+
+B2) Install composer
+sudo yum -y update
+cd /tmp
+sudo curl -sS https://getcomposer.org/installer | php
+
+mv composer.phar /usr/local/bin/composer
+
+B3) Create a Symfony project
+yum install php-xml
+yum install php-mbstring
+yum install php-process
+
+cd /root/
+
+composer create-project symfony/website-skeleton mariadbapi
+cd mariadbapi/
+vi .env
+------------------------------------
+DATABASE_URL=mysql://root:admin2018@127.0.0.1:3306/eStore
+------------------------------------
+
+C) Install Kahlan
+composer require --dev kahlan/kahlan
+
+[root@ip-172-31-95-82 symfonyapi]# ./vendor/bin/kahlan --spec=tests
+            _     _
+  /\ /\__ _| |__ | | __ _ _ __
+ / //_/ _` | '_ \| |/ _` | '_ \
+/ __ \ (_| | | | | | (_| | | | |
+\/  \/\__,_|_| |_|_|\__,_|_| |_|
+
+The PHP Test Framework for Freedom, Truth and Justice.
+
+src directory  : /root/symfonyapi/src
+spec directory : /root/symfonyapi/tests
+
+                                                                    1 / 1 (100%)
+
+
+
+Expectations   : 0 Executed
+Specifications : 0 Pending, 0 Excluded, 0 Skipped
+
+Passed 0 of 0 PASS in 0.005 seconds (using 2MB)
+
+
+[root@ip-172-31-95-82 Symfony4]# vi kahlan-config.php
+------------------------------------------------------------
+<?php // kahlan-config.php
+
+use App\Kernel;
+use Kahlan\Filter\Filters;
+use Symfony\Component\HttpFoundation\Request;
+
+Filters::apply($this, 'bootstrap', function($next) {
+
+    require __DIR__ . '/vendor/autoload.php';
+
+    $root = $this->suite()->root();
+    $root->beforeAll(function () {
+       $this->request = Request::createFromGlobals();
+       $this->kernel  = new Kernel('test', false);
+    });
+
+    return $next();
+
+});
+
+?>
+------------------------------------------------------------
+
+
+D) Install MariaDB
+
+yum update
+yum install mariadb-server
+
+sudo systemctl enable mariadb
+
+systemctl start mariadb
+[root@ip-172-31-95-82 docker]# systemctl status mariadb
+  mariadb.service - MariaDB database server
+   Loaded: loaded (/usr/lib/systemd/system/mariadb.service; enabled; vendor preset: disabled)
+   Active: active (running) since Sat 2018-10-27 19:58:46 UTC; 53min ago
+  Process: 773 ExecStartPost=/usr/libexec/mariadb-wait-ready $MAINPID (code=exited, status=0/SUCCESS)
+  Process: 725 ExecStartPre=/usr/libexec/mariadb-prepare-db-dir %n (code=exited, status=0/SUCCESS)
+ Main PID: 772 (mysqld_safe)
+   CGroup: /system.slice/mariadb.service
+           ├─772 /bin/sh /usr/bin/mysqld_safe --basedir=/usr
+           └─953 /usr/libexec/mysqld --basedir=/usr --datadir=/var/lib/mysql --plugin-dir=/usr/lib64/mysql/plugin --log-error=/var/log/mariadb/mariadb.log --pid-file=/var/run/mariadb/mar...
+
+Oct 27 19:58:43 ip-172-31-95-82.ec2.internal systemd[1]: Starting MariaDB database server...
+Oct 27 19:58:43 ip-172-31-95-82.ec2.internal mariadb-prepare-db-dir[725]: Database MariaDB is probably initialized in /var/lib/mysql already, nothing is done.
+Oct 27 19:58:44 ip-172-31-95-82.ec2.internal mysqld_safe[772]: 181027 19:58:44 mysqld_safe Logging to '/var/log/mariadb/mariadb.log'.
+Oct 27 19:58:44 ip-172-31-95-82.ec2.internal mysqld_safe[772]: 181027 19:58:44 mysqld_safe Starting mysqld daemon with databases from /var/lib/mysql
+Oct 27 19:58:46 ip-172-31-95-82.ec2.internal systemd[1]: Started MariaDB database server.
+
+sudo mysql_secure_installation
+(Please set up the mariadb user = root and the root password = admin2018 )
+

@@ -1,0 +1,122 @@
+[cwhadmin@ip-172-31-12-185 ~]$ crontab -l
+0 0 * * * /bin/sh /home/cwhadmin/.ssh-key-dist  > /dev/null 2>&1
+*/5 * * * * /usr/local/bin/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-space-util --disk-path=/ --from-cron
+
+[cwhadmin@ip-172-31-12-185 ~]$
+
+[root@vserver13095 bin]# cat /root/.aws/config | grep profile | cut -d' ' -f2 | cut -d']' -f1 > /tmp/allprofileid.txt
+[root@vserver13095 bin]# cat /tmp/allprofileid.txt
+
+
+rm -f /tmp/wrongproducts.txt
+rm -f /tmp/goodproducts.txt
+while read line; do  
+    profileid="$line"
+    echo $profileid
+              
+    rm -f /tmp/${profileid}ec2.txt 
+    aws ec2 describe-instances --profile $profileid --output text | grep INSTANCES | cut -d$'\t' -f15 > /tmp/${profileid}ec2.txt 
+              
+    pFlag=0
+    while read line2; do  
+        ec2id="$line2"
+        echo $ec2id               
+                                    
+        cpFlag=`ssh cwhadmin@${ec2id}   "crontab -l | grep mon-put-instance-data.pl | grep nfs" `
+        if [ $? -eq 0 ]; then
+            pFlag=1;
+            break                                     
+        fi                                  
+    done < /tmp/${profileid}ec2.txt 
+             
+    if [ $pFlag -eq 0 ]; then
+        echo ${profileid} >> /tmp/wrongproducts.txt
+    else
+        echo ${profileid} >> /tmp/goodproducts.txt
+    fi
+
+done < /tmp/allprofileid.txt
+
+cat /tmp/wrongproducts.txt
+cat /tmp/goodproducts.txt
+
+Hanger Inc. - Compwellness Prod
+
+[root@vserver13095 tmp]# aws ec2 describe-instances --profile 98840 --output text  | grep INSTANCES | cut -d$'\t' -f15
+ec2-52-1-131-205.compute-1.amazonaws.com
+ec2-52-0-46-164.compute-1.amazonaws.com
+[root@vserver13095 tmp]# ssh cwhadmin@ec2-52-1-131-205.compute-1.amazonaws.com
+Permission denied (publickey).
+[root@vserver13095 tmp]# ssh cwhadmin@ec2-52-0-46-164.compute-1.amazonaws.com
+cwhadmin@ec2-52-0-46-164.compute-1.amazonaws.com's password:
+Last login: Thu Apr  6 18:15:03 2017 from 66.11.145.35
+
+       __|  __|_  )
+       _|  (     /   Amazon Linux AMI
+      ___|\___|___|
+
+https://aws.amazon.com/amazon-linux-ami/2014.03-release-notes/
+65 package(s) needed for security, out of 296 available
+Run "sudo yum update" to apply all updates.
+Amazon Linux version 2017.03 is available.
+[cwhadmin@ip-192-168-0-176 ~]$ crontab -l
+0 0 * * * /bin/sh /home/cwhadmin/.ssh-key-dist  > /dev/null 2>&1
+*/5 * * * * /usr/local/bin/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-space-util --disk-path=/  --disk-space-util --disk-path=/nfs --from-cron
+[cwhadmin@ip-192-168-0-176 ~]$
+
+
+
+
+
+rm -f /tmp/wrongproducts2.txt
+rm -f /tmp/wrongsshproducts2.txt
+rm -f /tmp/wrongawsec2products2.txt
+rm -f /tmp/goodproducts2.txt
+while read line; do  
+    profileid="$line"
+    echo $profileid
+              
+    rm -f /tmp/${profileid}ec2.txt 
+    aws ec2 describe-instances --profile $profileid --output text | grep INSTANCES | cut -d$'\t' -f15 > /tmp/${profileid}ec2.txt 
+    if [ $? -eq 0 ]; then  
+		echo goodaws
+	else
+		echo ${profileid} >> /tmp/wrongawsec2products2.txt
+	fi
+	
+    pFlag=0
+	sFlag=0
+	
+	while read line2; do  
+        ec2id="$line2"
+        echo $ec2id   
+	
+		sshFlag=`ssh cwhadmin@${ec2id} "ls" `
+		if [ $? -eq 0 ]; then
+			sFlag=$((sFlag+1))
+		fi
+                                    
+        cpFlag=`ssh cwhadmin@${ec2id} "crontab -l | grep mon-put-instance-data.pl | grep nfs" `
+        if [ $? -eq 0 ]; then
+            pFlag=1;
+            break                                     
+        fi                                  
+    done < /tmp/${profileid}ec2.txt 
+      
+	if [ $sFlag -eq 0 ]; then  
+		echo ${profileid} >> /tmp/wrongsshproducts2.txt		
+	else 
+		echo goodssh	
+		if [ $pFlag -eq 0 ]; then
+			echo ${profileid} >> /tmp/wrongproducts2.txt
+		else
+			echo ${profileid} >> /tmp/goodproducts2.txt
+		fi
+	fi
+
+done < /tmp/allprofileid.txt
+
+cat /tmp/wrongproducts2.txt
+cat /tmp/goodproducts2.txt
+cat /tmp/wrongsshproducts2.txt
+cat /tmp/wrongawsec2products2.txt

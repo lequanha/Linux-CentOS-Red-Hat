@@ -1,0 +1,17 @@
+Please follow the below steps under the root user to install python 3.7 for CentOS 7.5
+
+yum install gcc openssl-devel bzip2-devel  libffi-devel
+cd /tmp
+wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tgz
+tar xzf Python-3.7.0.tgz
+cd Python-3.7.0
+./configure --enable-optimizations
+make altinstall
+rm -f /usr/src/Python-3.7.0.tgz
+
+After that, please check the python installation
+[root@ip-172-31-95-82 tmp]# python3.7 -V
+Python 3.7.0
+
+[root@ip-172-31-95-82 tmp]# which python3.7
+/usr/local/bin/python3.7
